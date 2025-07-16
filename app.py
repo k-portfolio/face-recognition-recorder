@@ -1,8 +1,9 @@
+import os
 from flask import Flask, render_template, request, redirect, session, url_for
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
-import os
+from flask import send_from_directory
 
 load_dotenv()
 
@@ -62,7 +63,23 @@ def logout():
 def dashboard():
     if "user_id" not in session:
         return redirect(url_for("login"))
-    return f"ログイン中のユーザーID: {session["user_id"]}"
+    # return f"ログイン中のユーザーID: {session["user_id"]}"
+    return render_template("dashboard.html", user_id=session["user_id"])
+
+@app.route("/recordings")
+def recordings():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    files = os.listdir("recordings")
+    return render_template("recordings.html", files=files)
+
+@app.route("/recordings/<filename>")
+def download_file(filename):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    # send_from_directory パスインジェクション対策になる
+    return send_from_directory ("recordings", filename, as_attachment=True)
+    
 
 if __name__ == "__main__":
     app.run(debug=True)
