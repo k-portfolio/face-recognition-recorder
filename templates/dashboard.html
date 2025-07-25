@@ -1,11 +1,40 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head><title>Dashboard</title></head>
+<head><title>ダッシュボード</title></head>
 <body>
-  <h2>Dashboard</h2>
+  <h2>ダッシュボード</h2>
   <p>ようこそ、{{ user_id }}さん！</p>
   <p>ログイン成功！</p>
+  <button id="startBtn">録画開始</button>
+  <button id="stopBtn">録画停止</button>
+  <p id="status">ステータス: 録画停止</p>
+  <br><br>
   <a href="/recordings">録画一覧を見る</a>
   <a href="/logout">ログアウト</a>
+
+  <script>
+    async function startRecording() {
+      const res = await fetch('/start_recording', { method: 'POST' });
+      const data = await res.json();
+      document.getElementById('status').innerText = `ステータス: ${data.message}`;
+    }
+
+    async function stopRecording() {
+      const res = await fetch('/stop_recording', { method: 'POST' });
+      const data = await res.json();
+      document.getElementById('status').innerText = `ステータス: ${data.message}`;
+    }
+
+    async function getStatus() {
+      const res = await fetch('/recording_status');
+      const data = await res.json();
+      document.getElementById('status').innerText = `ステータス: ${(data.recording ? "録画中" : "録画停止")}`;
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startRecording);
+    document.getElementById('stopBtn').addEventListener('click', stopRecording);
+    window.onload = getStatus;
+  </script>
+
 </body>
 </html>
