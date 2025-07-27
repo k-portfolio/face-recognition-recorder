@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head><title>ダッシュボード</title></head>
+<head>
+  <title>ダッシュボード</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
 <body>
   <h2>ダッシュボード</h2>
   <p>ようこそ、{{ user_id }}さん！</p>
@@ -13,20 +16,22 @@
   <a href="/logout">ログアウト</a>
 
   <script>
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    
     async function startRecording() {
-      const res = await fetch('/start_recording', { method: 'POST' });
+      const res = await fetch('/start_recording', { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
       const data = await res.json();
       document.getElementById('status').innerText = `ステータス: ${data.message}`;
     }
 
     async function stopRecording() {
-      const res = await fetch('/stop_recording', { method: 'POST' });
+      const res = await fetch('/stop_recording', { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
       const data = await res.json();
       document.getElementById('status').innerText = `ステータス: ${data.message}`;
     }
 
     async function getStatus() {
-      const res = await fetch('/recording_status');
+      const res = await fetch('/recording_status', { headers: { 'X-CSRFToken': csrfToken } });
       const data = await res.json();
       document.getElementById('status').innerText = `ステータス: ${(data.recording ? "録画中" : "録画停止")}`;
     }

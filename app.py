@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from flask import send_from_directory
 from record import Recorder
+from flask_wtf.csrf import CSRFProtect
 
 load_dotenv()
 recorder = Recorder()
@@ -14,6 +15,9 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///app.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+# CSRF保護有効化
+csrf = CSRFProtect(app)
 
 # DBモデル
 class User(db.Model):
@@ -46,6 +50,8 @@ def login():
     if request.method == "POST":
         user = User.query.filter_by(username=request.form["username"]).first()
         if user and check_password_hash(user.password, request.form["password"]):
+            # セッション固定攻撃対策
+            session.clear()
             session["user_id"] = user.id
             return redirect(url_for("dashboard"))
         else:
