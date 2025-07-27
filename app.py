@@ -1,16 +1,22 @@
+# 標準ライブラリ
 import os
-from flask import Flask, render_template, request, redirect, session, url_for, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import timedelta
+
+# 外部ライブラリ
 from dotenv import load_dotenv
-from flask import send_from_directory
-from record import Recorder
+from flask import Flask, render_template, request, redirect, session, url_for, jsonify, send_from_directory
+from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# ローカルモジュール
+from record import Recorder
 
 load_dotenv()
 recorder = Recorder()
 
 app = Flask(__name__)
+app.permanent_session_lifetime = timedelta(minutes=15)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///app.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -26,6 +32,11 @@ class User(db.Model):
     password = db.Column(db.String(150), nullable=False)
 
 # ルーティング
+@app.before_request
+# セッションの有効期限を更新
+def refresh_session():
+    session.modified = True
+
 @app.route('/')
 def index():
     if "user_id" in session:
@@ -52,6 +63,8 @@ def login():
         if user and check_password_hash(user.password, request.form["password"]):
             # セッション固定攻撃対策
             session.clear()
+            # 自動ログアウト有効化(これがあるからpermanent_session_lifetimeが有効化される)
+            session.permanent = True
             session["user_id"] = user.id
             return redirect(url_for("dashboard"))
         else:
