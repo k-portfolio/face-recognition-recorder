@@ -1,6 +1,6 @@
 # 標準ライブラリ
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 
 # 外部ライブラリ
 from dotenv import load_dotenv
@@ -30,6 +30,14 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
+
+class RecordingLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    filename = db.Column(db.String(150), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('recording_logs', lazy=True))
 
 # ルーティング
 @app.before_request
@@ -90,8 +98,8 @@ def dashboard():
 def recordings():
     if "user_id" not in session:
         return redirect(url_for("login"))
-    files = os.listdir("recordings")
-    return render_template("recordings.html", files=files)
+    logs = RecordingLog.query.order_by(RecordingLog.timestamp.desc()).all()
+    return render_template("recordings.html", logs=logs)
 
 # 録画ファイルダウンロード
 @app.route("/recordings/<filename>")
@@ -119,9 +127,16 @@ def stop_recording():
     if not recorder.recording:
         return jsonify({"message": "録画は開始されていません。"}), 400
     recorder.stop()
+    # 録画停止後にログを保存
+    new_log = RecordingLog(
+        user_id=session["user_id"],
+        filename=os.path.basename(recorder.output_file)
+    )
+    db.session.add(new_log)
+    db.session.commit()
     return jsonify({"message": "録画を停止しました。"}), 200
 
-#  録画ステータス取得
+# 録画ステータス取得
 @app.route("/recording_status")
 def recording_status():
     if "user_id" not in session:
